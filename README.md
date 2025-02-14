@@ -1,1 +1,0 @@
-# object-detector-react-native
