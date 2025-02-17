@@ -1,15 +1,18 @@
+import "@tensorflow/tfjs-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  View,
 } from "react-native";
-import * as cocoSsd from "@tensorflow-models/coco-ssd";
 import * as tf from "@tensorflow/tfjs";
-import "@tensorflow/tfjs-react-native";
+import * as mobilenet from "@tensorflow-models/mobilenet";
+import * as cocoSsd from "@tensorflow-models/coco-ssd";
 import { Camera, CameraApi, CameraType } from "react-native-camera-kit";
 
 function App(): React.JSX.Element {
@@ -25,9 +28,15 @@ function App(): React.JSX.Element {
   useEffect(() => {
     (async () => {
       await tf.ready();
-      const loadedModel = await cocoSsd.load();
-      console.log("loadedModel", loadedModel)
-      setModel(model);
+      cocoSsd
+        .load()
+        .then((loadedModel) => {
+          console.log("loadedModel", loadedModel);
+          setModel(loadedModel);
+        })
+        .catch((error) => {
+          console.log("Error in loading model", error);
+        });
     })();
   }, []);
 
@@ -92,12 +101,22 @@ function App(): React.JSX.Element {
           </>
         )
       ) : (
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => setCameraVisible(true)}
-        >
-          <Text style={styles.buttonText}>Open Camera</Text>
-        </TouchableOpacity>
+        <View style={{ opacity: model === null ? 0.6 : 1 }}>
+          <TouchableOpacity
+            style={styles.button}
+            disabled={model === null}
+            onPress={() => setCameraVisible(true)}
+          >
+            {model === null ? (
+              <View style={styles.row}>
+                <ActivityIndicator color="white" style={{ marginRight: 10 }} />
+                <Text style={styles.buttonText}>Loading Model</Text>
+              </View>
+            ) : (
+              <Text style={styles.buttonText}>Open Camera</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       )}
       {detections.length > 0 && (
         <Text>Detected: {JSON.stringify(detections)}</Text>
@@ -111,6 +130,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     backgroundColor: "#ababab",
+  },
+  row: {
+    flexDirection: "row",
   },
   button: {
     alignItems: "center",
