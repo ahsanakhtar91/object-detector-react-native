@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "ObjectDetector.app"
-               BlueprintName = "ObjectDetector"
-               ReferencedContainer = "container:ObjectDetector.xcodeproj">
+               BuildableName = "reactnativecli.app"
+               BlueprintName = "reactnativecli"
+               ReferencedContainer = "container:reactnativecli.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "ObjectDetectorTests.xctest"
-               BlueprintName = "ObjectDetectorTests"
-               ReferencedContainer = "container:ObjectDetector.xcodeproj">
+               BuildableName = "reactnativecliTests.xctest"
+               BlueprintName = "reactnativecliTests"
+               ReferencedContainer = "container:reactnativecli.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "ObjectDetector.app"
-            BlueprintName = "ObjectDetector"
-            ReferencedContainer = "container:ObjectDetector.xcodeproj">
+            BuildableName = "reactnativecli.app"
+            BlueprintName = "reactnativecli"
+            ReferencedContainer = "container:reactnativecli.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "ObjectDetector.app"
-            BlueprintName = "ObjectDetector"
-            ReferencedContainer = "container:ObjectDetector.xcodeproj">
+            BuildableName = "reactnativecli.app"
+            BlueprintName = "reactnativecli"
+            ReferencedContainer = "container:reactnativecli.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
