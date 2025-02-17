@@ -24,9 +24,27 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     (async () => {
+      // console.log("yes123");
+      // fetch("https://example.org/products.json").then(async (xxx) => {
+      //   console.log("xxx", xxx);
+      // }).catch((e) => console.log(e));
+      // console.log("yes123", await response.json());
+
+      // console.log("yes");
       await tf.ready();
-      const loadedModel = await cocoSsd.load();
-      setModel(loadedModel);
+      // console.log('FETCH ',fetch);
+      // console.log('FETCH', fetch);
+      cocoSsd
+        // .load({base: "lite_mobilenet_v2", modelUrl: "https://ahsan.coms"})
+        .load()
+        .then((a) => {
+          console.log("done", a);
+          setModel(a);
+        })
+        .catch((e) => console.log("e", e));
+
+      // console.log("loadedModel", loadedModel)
+      // setModel(loadedModel);
     })();
   }, []);
 
