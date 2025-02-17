@@ -1,8 +1,11 @@
+// import "@tensorflow/tfjs-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Image } from "react-native";
 import * as tf from "@tensorflow/tfjs";
 import { fetch, decodeJpeg } from "@tensorflow/tfjs-react-native";
 import * as mobilenet from "@tensorflow-models/mobilenet";
+import * as cocoSsd from "@tensorflow-models/coco-ssd";
+import { Camera, CameraApi, CameraType } from "react-native-camera-kit";
 
 const App = () => {
   const [isTfReady, setIsTfReady] = useState(false);
@@ -48,6 +51,12 @@ const App = () => {
         justifyContent: "center",
       }}
     >
+      <Camera
+        // ref={cameraRef}
+        style={{ width: 300, height: 200 }}
+        cameraType={CameraType.Back}
+        flashMode="auto"
+      />
       <Image
         ref={image}
         source={require("./basketball.jpg")}
