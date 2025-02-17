@@ -1,4 +1,4 @@
-package com.reactnativecli.generated;
+package com.ObjectDetector.generated;
 
 import java.util.Arrays;
 import java.util.List;

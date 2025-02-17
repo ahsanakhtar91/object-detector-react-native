@@ -1,5 +1,5 @@
-package com.reactnativecli;
-import com.reactnativecli.generated.BasePackageList;
+package com.ObjectDetector;
+import com.ObjectDetector.generated.BasePackageList;
 import com.rnfs.RNFSPackage;
 
 
@@ -81,7 +81,7 @@ public class MainApplication extends Application implements ReactApplication {
          We use reflection here to pick up the class that initializes Flipper,
         since Flipper library is not available in release mode
         */
-        Class<?> aClass = Class.forName("com.reactnativecli.ReactNativeFlipper");
+        Class<?> aClass = Class.forName("com.ObjectDetector.ReactNativeFlipper");
         aClass
             .getMethod("initializeFlipper", Context.class, ReactInstanceManager.class)
             .invoke(null, context, reactInstanceManager);
