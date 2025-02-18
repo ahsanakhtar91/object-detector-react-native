@@ -1,6 +1,6 @@
 # Overview
 
-A quick demo for running [TFJS mobilenet model][mobilenet] using [TFJS React Native][tfjs-react-native] using *React Native CLI*.
+A quick demo running **TFJS** `mobilenet` model (using `tfjs-react-native`), built with **React Native CLI**.
 
 ## Steps to run
 
