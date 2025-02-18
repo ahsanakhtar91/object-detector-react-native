@@ -1,8 +1,7 @@
 {
-  "name": "image-classification-with-tfjs-react-native-rn-cli",
+  "name": "object-detector",
   "version": "0.0.1",
-  "license": "Apache-2.0",
-  "private": true,
+  "author": "Ahsan Akhtar",
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
