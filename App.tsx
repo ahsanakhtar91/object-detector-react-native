@@ -13,10 +13,11 @@ import {
 import * as tf from "@tensorflow/tfjs";
 import * as tfRN from "@tensorflow/tfjs-react-native";
 import * as mobilenet from "@tensorflow-models/mobilenet";
-import * as cocoSsd from "@tensorflow-models/coco-ssd";
+// import * as cocoSsd from "@tensorflow-models/coco-ssd";
 import { Camera, CameraApi, CameraType } from "react-native-camera-kit";
 import { FileSystem } from "react-native-unimodules";
 import RNFS from "react-native-fs";
+import ImagePicker from "react-native-image-crop-picker";
 
 function App(): React.JSX.Element {
   const cameraRef = useRef<CameraApi>(null);
@@ -25,14 +26,22 @@ function App(): React.JSX.Element {
   const [cameraType, setCameraType] = useState<CameraType>(CameraType.Back);
 
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [model, setModel] = useState<cocoSsd.ObjectDetection | null>(null);
-  const [detections, setDetections] = useState<cocoSsd.DetectedObject[]>([]);
+
+  const [model, setModel] = useState<mobilenet.MobileNet | null>(null);
+  const [detections, setDetections] = useState<
+    {
+      className: string;
+      probability: number;
+    }[]
+  >([]);
 
   useEffect(() => {
     (async () => {
       await tf.ready();
-      cocoSsd
-        .load({ base: "mobilenet_v2" })
+      // cocoSsd
+      // .load({ base: "mobilenet_v2" })
+      mobilenet
+        .load()
         .then((loadedModel) => {
           console.log("loadedModel", loadedModel);
           setModel(loadedModel);
@@ -43,42 +52,68 @@ function App(): React.JSX.Element {
     })();
   }, []);
 
-  const convertImageToTensor = async (uri: string) => {
-    const urlComponents = uri.split("/");
-    const fileNameAndExtension = urlComponents[urlComponents.length - 1];
-    const destPath = `${RNFS.TemporaryDirectoryPath}/${fileNameAndExtension}`;
-    await RNFS.copyFile(uri, destPath);
+  const uriToBlob = (uri: string) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        // return the blob
+        resolve(xhr.response);
+      };
+      xhr.onerror = function () {
+        reject(new Error("uriToBlob failed"));
+      };
+      xhr.responseType = "blob";
+      xhr.open("GET", uri, true);
 
-    console.log("1", "file:/" + destPath);
-    const imgB64 = await FileSystem.readAsStringAsync("file://" + destPath, {
+      xhr.send(null);
+    });
+  };
+
+  const convertImageToTensor = async (uri: string, fromCamera: boolean) => {
+    let imageUri = "";
+    if (fromCamera) {
+      const urlComponents = uri.split("/");
+      const fileNameAndExtension = urlComponents[urlComponents.length - 1];
+      const destPath = `${RNFS.TemporaryDirectoryPath}/${fileNameAndExtension}`;
+      await RNFS.copyFile(uri, destPath);
+      imageUri = "file://" + destPath;
+    } else {
+      imageUri = uri;
+    }
+
+    console.log("fromCamera", fromCamera);
+    console.log("1", imageUri);
+    const imgB64 = await FileSystem.readAsStringAsync(imageUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
-    console.log("2", imgB64);
+    console.log("2");
     const imgBuffer = tf.util.encodeString(imgB64, "base64").buffer;
     console.log("3");
     const raw = new Uint8Array(imgBuffer);
     console.log("4");
     const imageTensor = tfRN.decodeJpeg(raw);
-    console.log("5");
-
-    // const imageAssetPath = Image.resolveAssetSource(image);
-    // const response = await tfRN.fetch('file://' + destPath);
-    // const blob = await response.blob();
-
-    // const imageTensor = await tf.browser.fromPixels(blob);
-
     console.log("imageTensor", imageTensor);
+
+    // const image = require("./B1.png");
+    // const imageAssetPath = Image.resolveAssetSource(image);
+    // const response = await tfRN.fetch(imageAssetPath.uri, {}, { isBinary: true });
+    // const imageDataArrayBuffer = await response.arrayBuffer();
+    // const imageData = new Uint8Array(imageDataArrayBuffer);
+    // const imageTensor = tfRN.decodeJpeg(imageData);
+
     return imageTensor;
   };
 
-  const handleCapture = async (image: { uri: string }) => {
+  const handleCapture = async (image: { uri: string }, fromCamera: boolean) => {
     setImageUri(image.uri);
 
     if (model) {
-      const tensor = await convertImageToTensor(image.uri);
-      const detections = await model.detect(tensor);
-      setDetections(detections);
+      const tensor = await convertImageToTensor(image.uri, fromCamera);
+      const detections = await model.classify(tensor);
       console.log("Predictions:", detections);
+      if (detections && detections.length > 0) {
+        setDetections(detections);
+      }
     }
   };
 
@@ -96,7 +131,7 @@ function App(): React.JSX.Element {
                 setDetections([]);
               }}
             >
-              <Text style={styles.buttonText}>Retake</Text>
+              <Text style={styles.buttonText}>Go Back</Text>
             </TouchableOpacity>
             <Image source={{ uri: imageUri }} style={{ flex: 1 }} />
           </>
@@ -109,10 +144,27 @@ function App(): React.JSX.Element {
               flashMode="auto"
             />
             <TouchableOpacity
+              style={styles.pickFromGalleryButton}
+              onPress={() =>
+                ImagePicker.openPicker({
+                  width: 300,
+                  height: 400,
+                  cropping: true,
+                  multiple: false,
+                }).then((image) => {
+                  if (!Array.isArray(image)) {
+                    handleCapture({ uri: image.path }, false);
+                  }
+                })
+              }
+            >
+              <Text style={{...styles.buttonIcon, fontSize: 18}}>🖼️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.captureButton}
               onPress={async () => {
                 const image = await cameraRef.current?.capture();
-                image?.uri && handleCapture(image);
+                image?.uri && handleCapture(image, true);
               }}
             />
             <TouchableOpacity
@@ -123,7 +175,7 @@ function App(): React.JSX.Element {
                 )
               }
             >
-              <Text style={styles.buttonIcon}>↻</Text>
+              <Text style={{...styles.buttonIcon, fontSize: 26}}>↻</Text>
             </TouchableOpacity>
           </>
         )
@@ -136,7 +188,7 @@ function App(): React.JSX.Element {
             {model === null ? (
               <View style={styles.row}>
                 <ActivityIndicator color="white" style={{ marginRight: 10 }} />
-                <Text style={styles.buttonText}>Loading Model</Text>
+                <Text style={styles.buttonText}>Loading TFJS Model</Text>
               </View>
             ) : (
               <Text style={styles.buttonText}>Open Camera</Text>
@@ -145,7 +197,16 @@ function App(): React.JSX.Element {
         </View>
       )}
       {detections.length > 0 && (
-        <Text>Detected: {JSON.stringify(detections)}</Text>
+        <View style={styles.detectionsArea}>
+          {detections.map(({ className, probability }, i) => (
+            <View style={styles.detections} key={i}>
+              <Text style={styles.detectionsLeft}>{className}</Text>
+              <Text style={styles.detectionsRight}>{`${(
+                probability * 100
+              ).toFixed(3)}%`}</Text>
+            </View>
+          ))}
+        </View>
       )}
     </SafeAreaView>
   );
@@ -178,27 +239,56 @@ const styles: StyleSheet.NamedStyles<any> = StyleSheet.create({
     fontWeight: "600",
   },
   captureButton: {
-    height: 60,
-    width: 60,
+    height: 70,
+    width: 70,
     backgroundColor: "#ffffff",
-    borderColor: "#000000",
-    borderWidth: 4,
-    // outlineColor: "#f0f0f0",
-    // outlineWidth: 3,
-    borderRadius: 30,
+    borderColor: "#555",
+    borderWidth: 5,
+    borderRadius: 35,
     position: "absolute",
     bottom: 40,
-    left: Dimensions.get("window").width / 2 - 30,
+    left: Dimensions.get("window").width / 2 - 35,
   },
   flipTypeButton: {
     height: 40,
     width: 40,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     alignItems: "center",
     borderRadius: 20,
     position: "absolute",
-    bottom: 40,
+    bottom: 50,
     left: Dimensions.get("window").width / 2 + 80,
+  },
+  pickFromGalleryButton: {
+    height: 40,
+    width: 40,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
+    position: "absolute",
+    bottom: 50,
+    left: Dimensions.get("window").width / 2 - 120,
+  },
+  detectionsArea: {
+    backgroundColor: "#333333",
+    borderColor: "#7359be",
+    borderWidth: 2,
+  },
+  detections: {
+    flexDirection: "row",
+    borderColor: "#7359be",
+    borderBottomWidth: 2,
+    paddingHorizontal: 6,
+  },
+  detectionsLeft: {
+    flex: 1,
+    color: "#7359be",
+    fontWeight: "bold",
+  },
+  detectionsRight: {
+    color: "#7359be",
+    fontWeight: "bold",
   },
 });
 
