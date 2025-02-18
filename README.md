@@ -1,4 +1,4 @@
-# Overview
+# Object Detector App (React Native)
 
 A quick demo of running **TFJS** `mobilenet` model (using `tfjs-react-native`), built with **React Native CLI**.
 
