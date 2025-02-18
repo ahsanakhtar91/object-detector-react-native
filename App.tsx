@@ -11,9 +11,12 @@ import {
   View,
 } from "react-native";
 import * as tf from "@tensorflow/tfjs";
+import * as tfRN from "@tensorflow/tfjs-react-native";
 import * as mobilenet from "@tensorflow-models/mobilenet";
 import * as cocoSsd from "@tensorflow-models/coco-ssd";
 import { Camera, CameraApi, CameraType } from "react-native-camera-kit";
+import { FileSystem } from "react-native-unimodules";
+import RNFS from "react-native-fs";
 
 function App(): React.JSX.Element {
   const cameraRef = useRef<CameraApi>(null);
@@ -29,7 +32,7 @@ function App(): React.JSX.Element {
     (async () => {
       await tf.ready();
       cocoSsd
-        .load()
+        .load({ base: "mobilenet_v2" })
         .then((loadedModel) => {
           console.log("loadedModel", loadedModel);
           setModel(loadedModel);
@@ -41,9 +44,30 @@ function App(): React.JSX.Element {
   }, []);
 
   const convertImageToTensor = async (uri: string) => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const imageTensor = await tf.browser.fromPixels(blob);
+    const urlComponents = uri.split("/");
+    const fileNameAndExtension = urlComponents[urlComponents.length - 1];
+    const destPath = `${RNFS.TemporaryDirectoryPath}/${fileNameAndExtension}`;
+    await RNFS.copyFile(uri, destPath);
+
+    console.log("1", "file:/" + destPath);
+    const imgB64 = await FileSystem.readAsStringAsync("file://" + destPath, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    console.log("2", imgB64);
+    const imgBuffer = tf.util.encodeString(imgB64, "base64").buffer;
+    console.log("3");
+    const raw = new Uint8Array(imgBuffer);
+    console.log("4");
+    const imageTensor = tfRN.decodeJpeg(raw);
+    console.log("5");
+
+    // const imageAssetPath = Image.resolveAssetSource(image);
+    // const response = await tfRN.fetch('file://' + destPath);
+    // const blob = await response.blob();
+
+    // const imageTensor = await tf.browser.fromPixels(blob);
+
+    console.log("imageTensor", imageTensor);
     return imageTensor;
   };
 
@@ -52,13 +76,13 @@ function App(): React.JSX.Element {
 
     if (model) {
       const tensor = await convertImageToTensor(image.uri);
-      const predictions = await model.detect(tensor);
-      setDetections(predictions);
-      console.log("Detections:", predictions);
+      const detections = await model.detect(tensor);
+      setDetections(detections);
+      console.log("Predictions:", detections);
     }
   };
 
-  console.log("detections", detections);
+  console.log("Predictions", detections);
 
   return (
     <SafeAreaView style={styles.root}>
@@ -67,7 +91,10 @@ function App(): React.JSX.Element {
           <>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => setImageUri(null)}
+              onPress={() => {
+                setImageUri(null);
+                setDetections([]);
+              }}
             >
               <Text style={styles.buttonText}>Retake</Text>
             </TouchableOpacity>
@@ -104,8 +131,7 @@ function App(): React.JSX.Element {
         <View style={{ opacity: model === null ? 0.6 : 1 }}>
           <TouchableOpacity
             style={styles.button}
-            disabled={model === null}
-            onPress={() => setCameraVisible(true)}
+            onPress={() => model !== null && setCameraVisible(true)}
           >
             {model === null ? (
               <View style={styles.row}>
@@ -125,7 +151,7 @@ function App(): React.JSX.Element {
   );
 }
 
-const styles = StyleSheet.create({
+const styles: StyleSheet.NamedStyles<any> = StyleSheet.create({
   root: {
     flex: 1,
     justifyContent: "center",
