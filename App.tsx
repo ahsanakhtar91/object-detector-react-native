@@ -38,10 +38,9 @@ function App(): React.JSX.Element {
   useEffect(() => {
     (async () => {
       await tf.ready();
-      // cocoSsd
-      // .load({ base: "mobilenet_v2" })
+
       mobilenet
-        .load()
+        .load({ version: 2, alpha: 0.75 })
         .then((loadedModel) => {
           console.log("loadedModel", loadedModel);
           setModel(loadedModel);
@@ -109,7 +108,7 @@ function App(): React.JSX.Element {
 
     if (model) {
       const tensor = await convertImageToTensor(image.uri, fromCamera);
-      const detections = await model.classify(tensor);
+      const detections = await model.classify(tensor, 5);
       console.log("Predictions:", detections);
       if (detections && detections.length > 0) {
         setDetections(detections);
@@ -158,7 +157,7 @@ function App(): React.JSX.Element {
                 })
               }
             >
-              <Text style={{...styles.buttonIcon, fontSize: 18}}>🖼️</Text>
+              <Text style={{ ...styles.buttonIcon, fontSize: 18 }}>🖼️</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.captureButton}
@@ -175,7 +174,7 @@ function App(): React.JSX.Element {
                 )
               }
             >
-              <Text style={{...styles.buttonIcon, fontSize: 26}}>↻</Text>
+              <Text style={{ ...styles.buttonIcon, fontSize: 26 }}>↻</Text>
             </TouchableOpacity>
           </>
         )
