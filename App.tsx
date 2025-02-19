@@ -117,7 +117,7 @@ function App(): React.JSX.Element {
                       style={{ marginRight: 10 }}
                     />
                     <Text style={styles.buttonText}>
-                      Detecting Objects {detections.length}
+                      Detecting Objects
                     </Text>
                   </View>
                 ) : (
