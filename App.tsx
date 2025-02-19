@@ -51,23 +51,6 @@ function App(): React.JSX.Element {
     })();
   }, []);
 
-  const uriToBlob = (uri: string) => {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.onload = function () {
-        // return the blob
-        resolve(xhr.response);
-      };
-      xhr.onerror = function () {
-        reject(new Error("uriToBlob failed"));
-      };
-      xhr.responseType = "blob";
-      xhr.open("GET", uri, true);
-
-      xhr.send(null);
-    });
-  };
-
   const convertImageToTensor = async (uri: string, fromCamera: boolean) => {
     let imageUri = "";
     if (fromCamera) {
@@ -86,19 +69,12 @@ function App(): React.JSX.Element {
       encoding: FileSystem.EncodingType.Base64,
     });
     console.log("2");
-    const imgBuffer = tf.util.encodeString(imgB64, "base64").buffer;
+    const imgBuffer = tf.util.encodeString(imgB64, "base64");
     console.log("3");
-    const raw = new Uint8Array(imgBuffer);
+    const raw = Uint8Array.from(imgBuffer);
     console.log("4");
     const imageTensor = tfRN.decodeJpeg(raw);
     console.log("imageTensor", imageTensor);
-
-    // const image = require("./B1.png");
-    // const imageAssetPath = Image.resolveAssetSource(image);
-    // const response = await tfRN.fetch(imageAssetPath.uri, {}, { isBinary: true });
-    // const imageDataArrayBuffer = await response.arrayBuffer();
-    // const imageData = new Uint8Array(imageDataArrayBuffer);
-    // const imageTensor = tfRN.decodeJpeg(imageData);
 
     return imageTensor;
   };
@@ -109,14 +85,14 @@ function App(): React.JSX.Element {
     if (model) {
       const tensor = await convertImageToTensor(image.uri, fromCamera);
       const detections = await model.classify(tensor, 5);
-      console.log("Predictions:", detections);
+      console.log("Detections:", detections);
       if (detections && detections.length > 0) {
         setDetections(detections);
       }
     }
   };
 
-  console.log("Predictions", detections);
+  console.log("Detections", detections);
 
   return (
     <SafeAreaView style={styles.root}>
