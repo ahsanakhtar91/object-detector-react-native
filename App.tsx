@@ -99,15 +99,32 @@ function App(): React.JSX.Element {
       {cameraVisible ? (
         imageUri ? (
           <>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => {
-                setImageUri(null);
-                setDetections([]);
-              }}
-            >
-              <Text style={styles.buttonText}>Go Back</Text>
-            </TouchableOpacity>
+            <View style={{ opacity: detections.length === 0 ? 0.6 : 1 }}>
+              <TouchableOpacity
+                style={styles.button}
+                disabled={detections.length === 0}
+                onPress={() => {
+                  if (detections.length !== 0) {
+                    setImageUri(null);
+                    setDetections([]);
+                  }
+                }}
+              >
+                {detections.length === 0 ? (
+                  <View style={styles.row}>
+                    <ActivityIndicator
+                      color="white"
+                      style={{ marginRight: 10 }}
+                    />
+                    <Text style={styles.buttonText}>
+                      Detecting Objects {detections.length}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.buttonText}>Go Back</Text>
+                )}
+              </TouchableOpacity>
+            </View>
             <Image source={{ uri: imageUri }} style={{ flex: 1 }} />
           </>
         ) : (
@@ -158,12 +175,15 @@ function App(): React.JSX.Element {
         <View style={{ opacity: model === null ? 0.6 : 1 }}>
           <TouchableOpacity
             style={styles.button}
+            disabled={model === null}
             onPress={() => model !== null && setCameraVisible(true)}
           >
             {model === null ? (
               <View style={styles.row}>
                 <ActivityIndicator color="white" style={{ marginRight: 10 }} />
-                <Text style={styles.buttonText}>Loading TFJS Model</Text>
+                <Text style={styles.buttonText}>
+                  Loading TFJS Mobilenet Model
+                </Text>
               </View>
             ) : (
               <Text style={styles.buttonText}>Open Camera</Text>
