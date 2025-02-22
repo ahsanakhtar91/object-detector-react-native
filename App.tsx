@@ -23,7 +23,7 @@ function App(): React.JSX.Element {
   const cameraRef = useRef<CameraApi>(null);
 
   const [cameraVisible, setCameraVisible] = useState(false);
-  const [cameraType, setCameraType] = useState<CameraType>(CameraType.Back);
+  const [cameraType, setCameraType] = useState<CameraType>(CameraType.Front);
 
   const [imageUri, setImageUri] = useState<string | null>(null);
 
@@ -64,15 +64,13 @@ function App(): React.JSX.Element {
     }
 
     console.log("fromCamera", fromCamera);
-    console.log("1", imageUri);
+    console.log("imageUri", imageUri);
     const imgB64 = await FileSystem.readAsStringAsync(imageUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
-    console.log("2");
     const imgBuffer = tf.util.encodeString(imgB64, "base64");
-    console.log("3");
     const raw = Uint8Array.from(imgBuffer);
-    console.log("4");
+    console.log("decodingJpeg");
     const imageTensor = tfRN.decodeJpeg(raw);
     console.log("imageTensor", imageTensor);
 
@@ -84,15 +82,13 @@ function App(): React.JSX.Element {
 
     if (model) {
       const tensor = await convertImageToTensor(image.uri, fromCamera);
-      const detections = await model.classify(tensor, 5);
+      const detections = await model.classify(tensor, 4);
       console.log("Detections:", detections);
       if (detections && detections.length > 0) {
         setDetections(detections);
       }
     }
   };
-
-  console.log("Detections", detections);
 
   return (
     <SafeAreaView style={styles.root}>
@@ -117,7 +113,7 @@ function App(): React.JSX.Element {
                       style={{ marginRight: 10 }}
                     />
                     <Text style={styles.buttonText}>
-                      Detecting Objects
+                      Detecting Objects from the image
                     </Text>
                   </View>
                 ) : (
@@ -125,6 +121,18 @@ function App(): React.JSX.Element {
                 )}
               </TouchableOpacity>
             </View>
+            {detections.length > 0 && (
+              <View style={styles.detectionsArea}>
+                {detections.map(({ className, probability }, i) => (
+                  <View style={styles.detections} key={i}>
+                    <Text style={styles.detectionsLeft}>{className}</Text>
+                    <Text style={styles.detectionsRight}>
+                      {probability.toFixed(3)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
             <Image source={{ uri: imageUri }} style={{ flex: 1 }} />
           </>
         ) : (
@@ -182,25 +190,13 @@ function App(): React.JSX.Element {
               <View style={styles.row}>
                 <ActivityIndicator color="white" style={{ marginRight: 10 }} />
                 <Text style={styles.buttonText}>
-                  Loading TFJS Mobilenet Model
+                  Loading TFJS mobilenet_v2 Model
                 </Text>
               </View>
             ) : (
               <Text style={styles.buttonText}>Open Camera</Text>
             )}
           </TouchableOpacity>
-        </View>
-      )}
-      {detections.length > 0 && (
-        <View style={styles.detectionsArea}>
-          {detections.map(({ className, probability }, i) => (
-            <View style={styles.detections} key={i}>
-              <Text style={styles.detectionsLeft}>{className}</Text>
-              <Text style={styles.detectionsRight}>{`${(
-                probability * 100
-              ).toFixed(3)}%`}</Text>
-            </View>
-          ))}
         </View>
       )}
     </SafeAreaView>
@@ -275,15 +271,18 @@ const styles: StyleSheet.NamedStyles<any> = StyleSheet.create({
     borderColor: "#7359be",
     borderBottomWidth: 2,
     paddingHorizontal: 6,
+    paddingVertical: 2
   },
   detectionsLeft: {
     flex: 1,
     color: "#7359be",
     fontWeight: "bold",
+    fontSize: 16,
   },
   detectionsRight: {
     color: "#7359be",
     fontWeight: "bold",
+    fontSize: 16,
   },
 });
 
