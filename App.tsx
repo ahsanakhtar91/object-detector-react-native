@@ -1,115 +1,211 @@
-import React, { useEffect, useState } from "react";
+import "@tensorflow/tfjs-react-native";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { Camera } from "expo-camera";
-// import { StatusBar } from "expo-status-bar";
-// import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as tf from "@tensorflow/tfjs";
-import "@tensorflow/tfjs-react-native";
-import { modelURI } from "./modelHandler";
-import CameraView from "./CameraView";
+import * as tfRN from "@tensorflow/tfjs-react-native";
+import * as mobilenet from "@tensorflow-models/mobilenet";
+// import * as cocoSsd from "@tensorflow-models/coco-ssd";
+import { Camera, CameraApi, CameraType } from "react-native-camera-kit";
+import { FileSystem } from "react-native-unimodules";
+import RNFS from "react-native-fs";
+import ImagePicker from "react-native-image-crop-picker";
 
-const App = () => {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [type, setType] = useState("front");
-  const [model, setModel] = useState<tf.GraphModel | null>(null);
-  const [loading, setLoading] = useState({ loading: true, progress: 0 }); // loading state
-  const [inputTensor, setInputTensor] = useState<number[] | undefined>([]);
+function App(): React.JSX.Element {
+  const cameraRef = useRef<CameraApi>(null);
 
-  // model configuration
-  const configurations = { threshold: 0.25 };
+  const [cameraVisible, setCameraVisible] = useState(false);
+  const [cameraType, setCameraType] = useState<CameraType>(CameraType.Back);
+
+  const [imageUri, setImageUri] = useState<string | null>(null);
+
+  const [model, setModel] = useState<mobilenet.MobileNet | null>(null);
+  const [detections, setDetections] = useState<
+    {
+      className: string;
+      probability: number;
+    }[]
+  >([]);
 
   useEffect(() => {
     (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === "granted");
-      tf.ready().then(async () => {
-        const yolov5 = await tf.loadGraphModel(modelURI, {
-          onProgress: (fractions) => {
-            setLoading({ loading: true, progress: fractions }); // set loading fractions
-          },
-        }); // load model
+      await tf.ready();
 
-        // warming up model
-        const dummyInput = tf.ones(yolov5.inputs[0].shape!);
-        await yolov5.executeAsync(dummyInput);
-        tf.dispose(dummyInput);
-
-        // set state
-        setInputTensor(yolov5.inputs[0].shape);
-        setModel(yolov5);
-        setLoading({ loading: false, progress: 1 });
-      });
+      mobilenet
+        .load({ version: 2, alpha: 0.75 })
+        .then((loadedModel) => {
+          console.log("loadedModel", loadedModel);
+          setModel(loadedModel);
+        })
+        .catch((error) => {
+          console.log("Error in loading model", error);
+        });
     })();
   }, []);
 
-  console.log(hasPermission, loading)
+  const convertImageToTensor = async (uri: string, fromCamera: boolean) => {
+    let imageUri = "";
+    if (fromCamera) {
+      const urlComponents = uri.split("/");
+      const fileNameAndExtension = urlComponents[urlComponents.length - 1];
+      const destPath = `${RNFS.TemporaryDirectoryPath}/${fileNameAndExtension}`;
+      await RNFS.copyFile(uri, destPath);
+      imageUri = "file://" + destPath;
+    } else {
+      imageUri = uri;
+    }
+
+    console.log("fromCamera", fromCamera);
+    console.log("1", imageUri);
+    const imgB64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    console.log("2");
+    const imgBuffer = tf.util.encodeString(imgB64, "base64");
+    console.log("3");
+    const raw = Uint8Array.from(imgBuffer);
+    console.log("4");
+    const imageTensor = tfRN.decodeJpeg(raw);
+    console.log("imageTensor", imageTensor);
+
+    return imageTensor;
+  };
+
+  const handleCapture = async (image: { uri: string }, fromCamera: boolean) => {
+    setImageUri(image.uri);
+
+    if (model) {
+      const tensor = await convertImageToTensor(image.uri, fromCamera);
+      const detections = await model.classify(tensor, 5);
+      console.log("Detections:", detections);
+      if (detections && detections.length > 0) {
+        setDetections(detections);
+      }
+    }
+  };
+
+  console.log("Detections", detections);
 
   return (
     <SafeAreaView style={styles.root}>
-      {hasPermission ? (
-        <>
-          {loading.loading ? (
-            <Text>Loading model... {(loading.progress * 100).toFixed(2)}%</Text>
-          ) : (
-            <>
-              {/* // <View> */}
-                {/* <Camera
-                  // ref={cameraRef}
-                  style={{ flex: 1 }}
-                  cameraType={CameraType.Front}
-                  flashMode="auto"
-                /> */}
-                <CameraView
-                  type={type}
-                  model={model}
-                  inputTensorSize={inputTensor}
-                  config={configurations}
-                >
-                  <View
-                  // className="absolute left-0 top-0 w-full h-full flex justify-end items-center bg-transparent z-20"
-                  >
-                    <TouchableOpacity
-                      // className="flex flex-row items-center bg-transparent border-2 border-white p-3 mb-10 rounded-lg"
-                      onPress={() =>
-                        setType((current) =>
-                          current === "back" ? "front" : "back"
-                        )
-                      }
-                    >
-                      {/* // { <MaterialCommunityIcons
-                      //   className="mx-2"
-                      //   name="camera-flip"
-                      //   size={30}
-                      //   color="white"
-                      // />} */}
-                      <Text
-                      // className="mx-2 text-white text-lg font-semibold"
-                      >
-                        Flip Camera
-                      </Text>
-                    </TouchableOpacity>
+      {cameraVisible ? (
+        imageUri ? (
+          <>
+            <View style={{ opacity: detections.length === 0 ? 0.6 : 1 }}>
+              <TouchableOpacity
+                style={styles.button}
+                disabled={detections.length === 0}
+                onPress={() => {
+                  if (detections.length !== 0) {
+                    setImageUri(null);
+                    setDetections([]);
+                  }
+                }}
+              >
+                {detections.length === 0 ? (
+                  <View style={styles.row}>
+                    <ActivityIndicator
+                      color="white"
+                      style={{ marginRight: 10 }}
+                    />
+                    <Text style={styles.buttonText}>
+                      Detecting Objects
+                    </Text>
                   </View>
-                </CameraView>
-              {/* // </View> */}
-            </>
-          )}
-        </>
+                ) : (
+                  <Text style={styles.buttonText}>Go Back</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <Image source={{ uri: imageUri }} style={{ flex: 1 }} />
+          </>
+        ) : (
+          <>
+            <Camera
+              ref={cameraRef}
+              style={{ flex: 1 }}
+              cameraType={cameraType}
+              flashMode="auto"
+            />
+            <TouchableOpacity
+              style={styles.pickFromGalleryButton}
+              onPress={() =>
+                ImagePicker.openPicker({
+                  width: 300,
+                  height: 400,
+                  cropping: true,
+                  multiple: false,
+                }).then((image) => {
+                  if (!Array.isArray(image)) {
+                    handleCapture({ uri: image.path }, false);
+                  }
+                })
+              }
+            >
+              <Text style={{ ...styles.buttonIcon, fontSize: 18 }}>🖼️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.captureButton}
+              onPress={async () => {
+                const image = await cameraRef.current?.capture();
+                image?.uri && handleCapture(image, true);
+              }}
+            />
+            <TouchableOpacity
+              style={styles.flipTypeButton}
+              onPress={() =>
+                setCameraType((t) =>
+                  t === CameraType.Back ? CameraType.Front : CameraType.Back
+                )
+              }
+            >
+              <Text style={{ ...styles.buttonIcon, fontSize: 26 }}>↻</Text>
+            </TouchableOpacity>
+          </>
+        )
       ) : (
-        <View>
-          <Text>Permission not granted!</Text>
+        <View style={{ opacity: model === null ? 0.6 : 1 }}>
+          <TouchableOpacity
+            style={styles.button}
+            disabled={model === null}
+            onPress={() => model !== null && setCameraVisible(true)}
+          >
+            {model === null ? (
+              <View style={styles.row}>
+                <ActivityIndicator color="white" style={{ marginRight: 10 }} />
+                <Text style={styles.buttonText}>
+                  Loading TFJS Mobilenet Model
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.buttonText}>Open Camera</Text>
+            )}
+          </TouchableOpacity>
         </View>
       )}
-      {/* <StatusBar style="auto" /> */}
+      {detections.length > 0 && (
+        <View style={styles.detectionsArea}>
+          {detections.map(({ className, probability }, i) => (
+            <View style={styles.detections} key={i}>
+              <Text style={styles.detectionsLeft}>{className}</Text>
+              <Text style={styles.detectionsRight}>{`${(
+                probability * 100
+              ).toFixed(3)}%`}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </SafeAreaView>
   );
-};
+}
 
 const styles: StyleSheet.NamedStyles<any> = StyleSheet.create({
   root: {
