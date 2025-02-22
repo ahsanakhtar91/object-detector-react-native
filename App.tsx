@@ -13,7 +13,6 @@ import {
 import * as tf from "@tensorflow/tfjs";
 import * as tfRN from "@tensorflow/tfjs-react-native";
 import * as mobilenet from "@tensorflow-models/mobilenet";
-// import * as cocoSsd from "@tensorflow-models/coco-ssd";
 import { Camera, CameraApi, CameraType } from "react-native-camera-kit";
 import { FileSystem } from "react-native-unimodules";
 import RNFS from "react-native-fs";
