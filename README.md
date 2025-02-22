@@ -1,6 +1,6 @@
 ## Object Detector (React Native)
 
-An small example app in **React Native**, related to <code>**AI**</code> and <code>**Machine Learning**</code>. It is built using **React Native CLI** / **TypeScript**.
+A small example app in **React Native**, related to <code>**AI**</code> and <code>**Machine Learning**</code>. It is built using **React Native CLI** / **TypeScript**.
 
 The features of this app are:
 * It detects objects from the images on _Android_, either captured by **camera** (front/back) or picked from the **gallery** on the mobile device.
